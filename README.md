@@ -1,6 +1,6 @@
 # Subnet Calculator
 
-Subnetting calculator written in Bash. Calculates first host, last host, network, and broadcast address. Also includes generator that generates practice problems and checks your answer (work in progress).
+Subnetting calculator written in Bash using basic UNIX tools. Calculates first host, last host, network, and broadcast address. Also includes generator that generates practice problems and checks your answer (work in progress).
 
 ### Sample usage & output
 
