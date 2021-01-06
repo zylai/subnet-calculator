@@ -1,15 +1,22 @@
 # Subnet Calculator
 
-Subnetting calculator written in Bash. Calculates first host, last host, network, and broadcast address. Work in progress
+Subnetting calculator written in Bash. Calculates first host, last host, network, and broadcast address. Also includes generator that generates practice problems and checks your answer (work in progress).
 
 ### Sample usage & output
 
 ```
-zylai:~ zylai$ ./subnet.sh 
+$ ./subnet.sh 
 Enter IPv4: 6.141.159.137
 Enter subnet mask in CIDR notation: 14
+----------RESULTS----------
 Network: 6.140.0.0
+First host: 6.140.0.1
+Last host: 6.143.255.254
 Broadcast: 6.143.255.255
-First host: 209.128.0.1  <----- this is incorrect, being worked on at the moment
-Last host: 209.255.255.6  <----- this is incorrect, being worked on at the moment
+---------------------------
 ```
+
+### Roadmap
+- Finish practice problem generator
+- Better way to calculate first & last host
+  - Currently, the script just takes the last octet and adds or minus 1. This causes overflow issues.
