@@ -10,8 +10,30 @@ convert2binary() {
 	echo $converted | sed 's/.$//'
 }
 
-printf "Enter IPv4: "
-read ipv4_decimal
+if [[ $# == 0 ]] || [[ $# -gt 2 ]]
+then
+	printf "Enter IPv4: "
+	read ipv4_decimal
+fi
+
+if [[ $# == 1 ]]
+then
+	echo "$1" | grep "/" &>/dev/null
+	if [[ $? == 1 ]]
+	then
+		echo "Invalid IPv4 & CIDR mask format"
+		exit 1
+		# TODO: instead of hard exit, assume input is IP address only and prompt user for mask
+	fi
+	ipv4_decimal=`echo "$1" | cut -f1 -d"/"`
+	user_input_mask=`echo "$1" | cut -f2 -d"/"`
+fi
+
+if [[ $# == 2 ]]
+then
+	ipv4_decimal=`echo "$1"`
+	user_input_mask=`echo "$2"`
+fi
 
 # Check if user input is valid IP
 # https://stackoverflow.com/a/25969006
@@ -24,8 +46,11 @@ then
 	exit 1
 fi
 
-printf "Enter subnet mask in CIDR notation: "
-read user_input_mask
+if [[ $# == 0 ]] || [[ $# -gt 2 ]]
+then
+	printf "Enter subnet mask in CIDR notation: "
+	read user_input_mask	
+fi
 
 mask_decimal=`echo $user_input_mask | tr -d "/"`
 
@@ -56,21 +81,15 @@ mask_binary_remainder_zeros=`len=$mask_decimal_remainder ch='0'; printf '%*s' "$
 mask_binary_remainder_ones=`len=$mask_decimal_remainder ch='1'; printf '%*s' "$len" | tr ' ' "$ch"`
 
 # Split the binary string at position of the subnet mask
+# For example, if the CIDR mask is /10, get the first 10 characters and discard everything else
 calculated_binary_ipv4_partial=`echo $ipv4_binary_no_dots | cut -c -$mask_decimal`
 
-# Fill the split binary string with trailing zeros or ones so it's back at 32 chars
+# Fill the split binary string with trailing zeros (network) or ones (broadcast) so it's back at 32 chars
 calculated_ipv4_binary_network_addr_no_dots=$calculated_binary_ipv4_partial$mask_binary_remainder_zeros
 calculated_ipv4_binary_broadcast_addr_no_dots=$calculated_binary_ipv4_partial$mask_binary_remainder_ones
 
-# Convert back to decimal first and perform +1 and -1 operation (to find the first and last host) using echo "obase=2;1001010011101+1" | bc
-# https://unix.stackexchange.com/a/65286
-calculated_ipv4_decimal_network_addr_added_value=`echo "$((2#$calculated_ipv4_binary_network_addr_no_dots))"`
-calculated_ipv4_decimal_broadcast_addr_added_value=`echo "$((2#$calculated_ipv4_binary_broadcast_addr_no_dots))"`
-
-calculated_ipv4_binary_first_host_no_dots=`echo "obase=2;$calculated_ipv4_decimal_network_addr_added_value+1" | bc`
-calculated_ipv4_binary_last_host_no_dots=`echo "obase=2;$calculated_ipv4_decimal_broadcast_addr_added_value-1" | bc`
-
 # Split everything back to octets and convert to decimal
+# Binary to decimal: https://unix.stackexchange.com/a/65286
 calculated_ipv4_binary_network_addr_octet_1=`echo $calculated_ipv4_binary_network_addr_no_dots | cut -c 1-8`
 calculated_ipv4_binary_network_addr_octet_2=`echo $calculated_ipv4_binary_network_addr_no_dots | cut -c 9-16`
 calculated_ipv4_binary_network_addr_octet_3=`echo $calculated_ipv4_binary_network_addr_no_dots | cut -c 17-24`
@@ -91,34 +110,12 @@ calculated_ipv4_decimal_broadcast_addr_octet_2=`echo "$((2#$calculated_ipv4_bina
 calculated_ipv4_decimal_broadcast_addr_octet_3=`echo "$((2#$calculated_ipv4_binary_broadcast_addr_octet_3))"`
 calculated_ipv4_decimal_broadcast_addr_octet_4=`echo "$((2#$calculated_ipv4_binary_broadcast_addr_octet_4))"`
 
-calculated_ipv4_binary_first_host_octet_1=`echo $calculated_ipv4_binary_first_host_no_dots | cut -c 1-8`
-calculated_ipv4_binary_first_host_octet_2=`echo $calculated_ipv4_binary_first_host_no_dots | cut -c 9-16`
-calculated_ipv4_binary_first_host_octet_3=`echo $calculated_ipv4_binary_first_host_no_dots | cut -c 17-24`
-calculated_ipv4_binary_first_host_octet_4=`echo $calculated_ipv4_binary_first_host_no_dots | cut -c 25-32`
+# TODO: This is not really a great way of calculating first & last host as it may cause overflow into 256, still working on a fix
+# TODO: Special case for calculating /31 and /32
 
-calculated_ipv4_decimal_first_host_octet_1=`echo "$((2#$calculated_ipv4_binary_first_host_octet_1))"`
-calculated_ipv4_decimal_first_host_octet_2=`echo "$((2#$calculated_ipv4_binary_first_host_octet_2))"`
-calculated_ipv4_decimal_first_host_octet_3=`echo "$((2#$calculated_ipv4_binary_first_host_octet_3))"`
-calculated_ipv4_decimal_first_host_octet_4=`echo "$((2#$calculated_ipv4_binary_first_host_octet_4))"`
-
-calculated_ipv4_binary_last_host_octet_1=`echo $calculated_ipv4_binary_last_host_no_dots | cut -c 1-8`
-calculated_ipv4_binary_last_host_octet_2=`echo $calculated_ipv4_binary_last_host_no_dots | cut -c 9-16`
-calculated_ipv4_binary_last_host_octet_3=`echo $calculated_ipv4_binary_last_host_no_dots | cut -c 17-24`
-calculated_ipv4_binary_last_host_octet_4=`echo $calculated_ipv4_binary_last_host_no_dots | cut -c 25-32`
-
-calculated_ipv4_decimal_last_host_octet_1=`echo "$((2#$calculated_ipv4_binary_last_host_octet_1))"`
-calculated_ipv4_decimal_last_host_octet_2=`echo "$((2#$calculated_ipv4_binary_last_host_octet_2))"`
-calculated_ipv4_decimal_last_host_octet_3=`echo "$((2#$calculated_ipv4_binary_last_host_octet_3))"`
-calculated_ipv4_decimal_last_host_octet_4=`echo "$((2#$calculated_ipv4_binary_last_host_octet_4))"`
-
+echo "----------RESULTS----------"
 echo "Network: $calculated_ipv4_decimal_network_addr_octet_1.$calculated_ipv4_decimal_network_addr_octet_2.$calculated_ipv4_decimal_network_addr_octet_3.$calculated_ipv4_decimal_network_addr_octet_4"
+echo "First host: $calculated_ipv4_decimal_network_addr_octet_1.$calculated_ipv4_decimal_network_addr_octet_2.$calculated_ipv4_decimal_network_addr_octet_3.`echo "$calculated_ipv4_decimal_network_addr_octet_4+1" | bc`"
+echo "Last host: $calculated_ipv4_decimal_broadcast_addr_octet_1.$calculated_ipv4_decimal_broadcast_addr_octet_2.$calculated_ipv4_decimal_broadcast_addr_octet_3.`echo "$calculated_ipv4_decimal_broadcast_addr_octet_4-1" | bc`"
 echo "Broadcast: $calculated_ipv4_decimal_broadcast_addr_octet_1.$calculated_ipv4_decimal_broadcast_addr_octet_2.$calculated_ipv4_decimal_broadcast_addr_octet_3.$calculated_ipv4_decimal_broadcast_addr_octet_4"
-echo "First host: $calculated_ipv4_decimal_first_host_octet_1.$calculated_ipv4_decimal_first_host_octet_2.$calculated_ipv4_decimal_first_host_octet_3.$calculated_ipv4_decimal_first_host_octet_4"
-echo "Last host: $calculated_ipv4_decimal_last_host_octet_1.$calculated_ipv4_decimal_last_host_octet_2.$calculated_ipv4_decimal_last_host_octet_3.$calculated_ipv4_decimal_last_host_octet_4"
-
-
-# https://stackoverflow.com/a/12633807
-#b_ipo1=`echo "obase=2;$d_ipo1" | bc | awk '{ len = (8 - length % 8) % 8; printf "%.*s%s\n", len, "00000000", $0}'`
-#b_ipo2=`echo "obase=2;$d_ipo2" | bc | awk '{ len = (8 - length % 8) % 8; printf "%.*s%s\n", len, "00000000", $0}'`
-#b_ipo3=`echo "obase=2;$d_ipo3" | bc | awk '{ len = (8 - length % 8) % 8; printf "%.*s%s\n", len, "00000000", $0}'`
-#b_ipo4=`echo "obase=2;$d_ipo4" | bc | awk '{ len = (8 - length % 8) % 8; printf "%.*s%s\n", len, "00000000", $0}'`
+echo "---------------------------"
