@@ -14,16 +14,24 @@ echo "Enter your solution in the following format: Network/First/Last/Broadcast"
 printf "-"
 printf "> "
 
-read input
+read response
 
-answer=`./subnet.sh $problem` # does not work, cannot save multi-line output
+response_network=`echo $response | cut -f1 -d/`
+response_first=`echo $response | cut -f2 -d/`
+response_last=`echo $response | cut -f3 -d/`
+response_broadcast=`echo $response | cut -f4 -d/`
 
-echo $answer
+answer="`./subnet.sh $problem | tr -d '\n [a-z][A-Z]'`"
 
-answer_network=`echo $answer | grep "Network:" | cut -f2 -d" "`
-answer_first=`echo $answer | grep "First:" | cut -f2 -d" "`
-answer_last=`echo $answer | grep "Last:" | cut -f2 -d" "`
-answer_broadcast=`echo $answer | grep "Broadcast:" | cut -f2 -d" "`
+answer_network=`echo $answer | cut -f2 -d:`
+answer_first=`echo $answer | cut -f3 -d:`
+answer_last=`echo $answer | cut -f4 -d:`
+answer_broadcast=`echo $answer | cut -f5 -d:`
+
+echo $response_network
+echo $response_first
+echo $response_last
+echo $response_broadcast
 
 echo $answer_network
 echo $answer_first
