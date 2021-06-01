@@ -1,6 +1,26 @@
 #!/bin/bash
 
-convert2binary() {
+# https://stackoverflow.com/a/10768196
+dec2ip () {
+    local ip dec=$@
+    for e in {3..0}
+    do
+        ((octet = dec / (256 ** e) ))
+        ((dec -= octet * 256 ** e))
+        ip+=$delim$octet
+        delim=.
+    done
+    printf '%s\n' "$ip"
+}
+
+# https://stackoverflow.com/a/10768196
+ip2dec () {
+    local a b c d ip=$@
+    IFS=. read -r a b c d <<< "$ip"
+    printf '%d\n' "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+}
+
+ip4dec2binary() {
 	for octet in 1 2 3 4
 	do
 		converted=$converted$(echo "obase=2;`echo $1 | cut -d'.' -f$octet`" | bc | awk '{ len = (8 - length % 8) % 8; printf "%.*s%s\n", len, "00000000", $0}')"."
@@ -60,7 +80,7 @@ then
 	exit 1
 fi
 
-ipv4_binary=`convert2binary $ipv4_decimal`
+ipv4_binary=`ip4dec2binary $ipv4_decimal`
 ipv4_binary_no_dots=`echo $ipv4_binary | tr -d "."`
 
 ipv4_decimal_octet_1=`echo $ipv4_decimal | cut -d'.' -f1`
@@ -75,7 +95,7 @@ ipv4_binary_octet_4=`echo $ipv4_binary | cut -d'.' -f4`
 
 mask_decimal_remainder=`echo "32-$mask_decimal" | bc`
 
-# Create string of repeated 0s or 1s
+# Create string of repeated 0s (network address) or 1s (broadcast address)
 # https://stackoverflow.com/a/3212714
 mask_binary_remainder_zeros=`len=$mask_decimal_remainder ch='0'; printf '%*s' "$len" | tr ' ' "$ch"`
 mask_binary_remainder_ones=`len=$mask_decimal_remainder ch='1'; printf '%*s' "$len" | tr ' ' "$ch"`
@@ -110,12 +130,17 @@ calculated_ipv4_decimal_broadcast_addr_octet_2=`echo "$((2#$calculated_ipv4_bina
 calculated_ipv4_decimal_broadcast_addr_octet_3=`echo "$((2#$calculated_ipv4_binary_broadcast_addr_octet_3))"`
 calculated_ipv4_decimal_broadcast_addr_octet_4=`echo "$((2#$calculated_ipv4_binary_broadcast_addr_octet_4))"`
 
-# TODO: This is not really a great way of calculating first & last host as it may cause overflow into 256, still working on a fix
+result_network_addr="$calculated_ipv4_decimal_network_addr_octet_1.$calculated_ipv4_decimal_network_addr_octet_2.$calculated_ipv4_decimal_network_addr_octet_3.$calculated_ipv4_decimal_network_addr_octet_4"
+result_broadcast_addr="$calculated_ipv4_decimal_broadcast_addr_octet_1.$calculated_ipv4_decimal_broadcast_addr_octet_2.$calculated_ipv4_decimal_broadcast_addr_octet_3.$calculated_ipv4_decimal_broadcast_addr_octet_4"
+result_first_addr=$(dec2ip `echo "$(ip2dec $result_network_addr)+1" | bc`)
+result_last_addr=$(dec2ip `echo "$(ip2dec $result_broadcast_addr)-1" | bc`)
+
 # TODO: Special case for calculating /31 and /32
 
-echo "----------RESULTS----------"
-echo "Network: $calculated_ipv4_decimal_network_addr_octet_1.$calculated_ipv4_decimal_network_addr_octet_2.$calculated_ipv4_decimal_network_addr_octet_3.$calculated_ipv4_decimal_network_addr_octet_4"
-echo "First host: $calculated_ipv4_decimal_network_addr_octet_1.$calculated_ipv4_decimal_network_addr_octet_2.$calculated_ipv4_decimal_network_addr_octet_3.`echo "$calculated_ipv4_decimal_network_addr_octet_4+1" | bc`"
-echo "Last host: $calculated_ipv4_decimal_broadcast_addr_octet_1.$calculated_ipv4_decimal_broadcast_addr_octet_2.$calculated_ipv4_decimal_broadcast_addr_octet_3.`echo "$calculated_ipv4_decimal_broadcast_addr_octet_4-1" | bc`"
-echo "Broadcast: $calculated_ipv4_decimal_broadcast_addr_octet_1.$calculated_ipv4_decimal_broadcast_addr_octet_2.$calculated_ipv4_decimal_broadcast_addr_octet_3.$calculated_ipv4_decimal_broadcast_addr_octet_4"
-echo "---------------------------"
+#echo "----------RESULTS----------"
+echo "Network: $result_network_addr"
+echo "First host: $result_first_addr"
+echo "Last host: $result_last_addr"
+echo "Broadcast: $result_broadcast_addr"
+#echo "---------------------------"
+
