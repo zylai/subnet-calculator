@@ -69,7 +69,8 @@ fi
 if [[ $# == 0 ]] || [[ $# -gt 2 ]]
 then
 	printf "Enter subnet mask in CIDR notation: "
-	read user_input_mask	
+	read user_input_mask
+	echo "-----------------------------"
 fi
 
 mask_decimal=`echo $user_input_mask | tr -d "/"`
@@ -143,4 +144,3 @@ echo "First host: $result_first_addr"
 echo "Last host: $result_last_addr"
 echo "Broadcast: $result_broadcast_addr"
 #echo "---------------------------"
-
