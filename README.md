@@ -2,7 +2,7 @@
 
 Subnetting calculator written in Bash using basic UNIX tools. Calculates first host, last host, network, and broadcast address. Also includes generator that generates practice problems and checks your answer. 
 
-Tested with Ubuntu 18 (Bash version 4.4.20) and macOS 10.15 Catalina (Bash version 3.2.57).
+Tested with Ubuntu 20.04 (Bash 4.4.20) and up, and macOS 10.15 Catalina (Bash 3.2.57) and up.
 
 ### Usage & sample output
 
